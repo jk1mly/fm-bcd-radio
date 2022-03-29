@@ -423,10 +423,10 @@ void bcd_num(uint8_t num) {
     }
 
     for (uint8_t lp = 0; lp < 60; lp++) {
-        if((num == 0)||(tim1[0] == BRIT1)){
+        if ((num == 0) || (tim1[0] == BRIT1)) {
             LED2_ON;
         }
-        if(num != 0){
+        if (num != 0) {
             for (uint8_t us = 0; us < tim1[0]; us++) {
                 LED_WAIT;
             }
@@ -436,10 +436,10 @@ void bcd_num(uint8_t num) {
             LED_WAIT;
         }
 
-        if((num == 0)||(tim1[1] == BRIT1)){
+        if ((num == 0) || (tim1[1] == BRIT1)) {
             LED3_ON;
         }
-        if(num != 0){
+        if (num != 0) {
             for (uint8_t us = 0; us < tim1[1]; us++) {
                 LED_WAIT;
             }
@@ -449,10 +449,10 @@ void bcd_num(uint8_t num) {
             LED_WAIT;
         }
 
-        if((num == 0)||(tim1[2] == BRIT1)){
+        if ((num == 0) || (tim1[2] == BRIT1)) {
             LED4_ON;
         }
-        if(num != 0){
+        if (num != 0) {
             for (uint8_t us = 0; us < tim1[2]; us++) {
                 LED_WAIT;
             }
@@ -462,10 +462,10 @@ void bcd_num(uint8_t num) {
             LED_WAIT;
         }
 
-        if((num == 0)||(tim1[3] == BRIT1)){
+        if ((num == 0) || (tim1[3] == BRIT1)) {
             LED5_ON;
         }
-        if(num != 0){
+        if (num != 0) {
             for (uint8_t us = 0; us < tim1[3]; us++) {
                 LED_WAIT;
             }
@@ -474,6 +474,14 @@ void bcd_num(uint8_t num) {
         for (uint8_t us = 0; us < tim0[3]; us++) {
             LED_WAIT;
         }
+
+        if (SW_UP == PUSH_ON) {
+            return;
+        }
+        if (SW_DN == PUSH_ON) {
+            return;
+        }
+
         __delay_ms(1);
     }
 }
@@ -508,7 +516,6 @@ void frq_bcd_disp(uint8_t freq) {
     bcd_num(frq3);
     //Wait        
     for (uint8_t lp = 0; lp < 4; lp++) {
-        __delay_ms(50);
         if (SW_UP == PUSH_ON) {
             return;
         }
@@ -518,12 +525,12 @@ void frq_bcd_disp(uint8_t freq) {
         if (SW_FN == PUSH_ON) {
             return;
         }
+        __delay_ms(50);
     }
 
     bcd_num(frq2);
     //Wait        
     for (uint8_t lp = 0; lp < 4; lp++) {
-        __delay_ms(50);
         if (SW_UP == PUSH_ON) {
             return;
         }
@@ -533,12 +540,12 @@ void frq_bcd_disp(uint8_t freq) {
         if (SW_FN == PUSH_ON) {
             return;
         }
+        __delay_ms(50);
     }
 
     bcd_num(frq1);
     //Wait        
     for (uint8_t lp = 0; lp < 6; lp++) {
-        __delay_ms(50);
         if (SW_UP == PUSH_ON) {
             return;
         }
@@ -548,6 +555,7 @@ void frq_bcd_disp(uint8_t freq) {
         if (SW_FN == PUSH_ON) {
             return;
         }
+        __delay_ms(50);
     }
 }
 
@@ -588,15 +596,12 @@ void main(void) {
     uint8_t vol = 6;
     uint8_t disp_c = 3;
 
-    /*    
-        if(SW_DN == PUSH_ON){
-            freq = SET_NAK;
-        } else if(SW_UP == PUSH_ON){
-            freq = SET_NHK;
-        } else if(SW_FN == PUSH_ON){
-            freq = SET_JWV;
-        }
-     */
+    if(SW_DN == PUSH_ON){
+        freq = SET_NAK;
+    } else if(SW_UP == PUSH_ON){
+        freq = SET_JWV;
+    }
+
     reg_set(freq, vol, M_FRQ_SET);
     __delay_ms(500);
 
@@ -629,7 +634,7 @@ void main(void) {
                     blk_led1();
                 }
                 __delay_ms(200);
-             }
+            }
             __delay_ms(200);
             continue;
         }
@@ -703,7 +708,7 @@ void main(void) {
         for (uint8_t lp = 0; lp < 10; lp++) {
             __delay_ms(50);
             if (SW_UP == PUSH_ON) {
-                if (disp_c > 7){
+                if (disp_c > 7) {
                     blk_led1();
                     blk_led5();
                     disp_c = 0;
@@ -711,7 +716,7 @@ void main(void) {
                 break;
             }
             if (SW_DN == PUSH_ON) {
-                if (disp_c > 7){
+                if (disp_c > 7) {
                     blk_led1();
                     blk_led5();
                     disp_c = 0;
@@ -719,7 +724,7 @@ void main(void) {
                 break;
             }
             if (SW_FN == PUSH_ON) {
-                if (disp_c > 7){
+                if (disp_c > 7) {
                     blk_led1();
                     blk_led5();
                     disp_c = 0;
@@ -749,6 +754,22 @@ void main(void) {
             freq = (frq_rd + 60);
         }
         frq_bcd_disp(freq);
+        if (SW_UP == PUSH_ON) {
+            if (disp_c > 7) {
+                blk_led1();
+                blk_led5();
+                disp_c = 0;
+            }
+            continue;
+        }
+        if (SW_DN == PUSH_ON) {
+            if (disp_c > 7) {
+                blk_led1();
+                blk_led5();
+                disp_c = 0;
+            }
+            continue;
+        }
         __delay_ms(100);
     }
 }
