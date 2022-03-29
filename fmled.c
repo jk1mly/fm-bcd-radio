@@ -422,7 +422,7 @@ void bcd_num(uint8_t num) {
         num = (uint8_t) (num << 1);
     }
 
-    for (uint8_t lp = 0; lp < 100; lp++) {
+    for (uint8_t lp = 0; lp < 60; lp++) {
         if((num == 0)||(tim1[0] == BRIT1)){
             LED2_ON;
         }
@@ -478,7 +478,7 @@ void bcd_num(uint8_t num) {
     }
 }
 
-uint8_t frq_bcd_disp(uint8_t freq) {
+void frq_bcd_disp(uint8_t freq) {
     uint8_t frq3 = 7;
     uint8_t frq2 = 0;
     uint8_t frq1 = 0;
@@ -506,40 +506,49 @@ uint8_t frq_bcd_disp(uint8_t freq) {
     }
 
     bcd_num(frq3);
-    if (SW_UP == PUSH_ON) {
-        return FLG_ON;
+    //Wait        
+    for (uint8_t lp = 0; lp < 4; lp++) {
+        __delay_ms(50);
+        if (SW_UP == PUSH_ON) {
+            return;
+        }
+        if (SW_DN == PUSH_ON) {
+            return;
+        }
+        if (SW_FN == PUSH_ON) {
+            return;
+        }
     }
-    if (SW_DN == PUSH_ON) {
-        return FLG_ON;
-    }
-    if (SW_FN == PUSH_ON) {
-        return FLG_ON;
-    }
-    __delay_ms(200);
-    bcd_num(frq2);
-    if (SW_UP == PUSH_ON) {
-        return FLG_ON;
-    }
-    if (SW_DN == PUSH_ON) {
-        return FLG_ON;
-    }
-    if (SW_FN == PUSH_ON) {
-        return FLG_ON;
-    }
-    __delay_ms(200);
-    bcd_num(frq1);
-    if (SW_UP == PUSH_ON) {
-        return FLG_ON;
-    }
-    if (SW_DN == PUSH_ON) {
-        return FLG_ON;
-    }
-    if (SW_FN == PUSH_ON) {
-        return FLG_ON;
-    }
-    __delay_ms(200);
 
-    return FLG_OFF;
+    bcd_num(frq2);
+    //Wait        
+    for (uint8_t lp = 0; lp < 4; lp++) {
+        __delay_ms(50);
+        if (SW_UP == PUSH_ON) {
+            return;
+        }
+        if (SW_DN == PUSH_ON) {
+            return;
+        }
+        if (SW_FN == PUSH_ON) {
+            return;
+        }
+    }
+
+    bcd_num(frq1);
+    //Wait        
+    for (uint8_t lp = 0; lp < 6; lp++) {
+        __delay_ms(50);
+        if (SW_UP == PUSH_ON) {
+            return;
+        }
+        if (SW_DN == PUSH_ON) {
+            return;
+        }
+        if (SW_FN == PUSH_ON) {
+            return;
+        }
+    }
 }
 
 void main(void) {
@@ -598,9 +607,9 @@ void main(void) {
         if (SW_FN == PUSH_ON) {
             frq_seq = 0;
             disp_c = 0;
+            __delay_ms(100);
             for (uint8_t lp = 0; lp < 10; lp++) {
                 blk_led3();
-                __delay_ms(100);
                 if (SW_UP == PUSH_ON) {
                     blk_led4();
                     if (vol < VOL_LMT_H) {
@@ -608,7 +617,6 @@ void main(void) {
                         lp = 0;
                     }
                     reg_set(freq, vol, M_VOL_SET);
-                    __delay_ms(100);
                     blk_led5();
                 }
                 if (SW_DN == PUSH_ON) {
@@ -618,11 +626,11 @@ void main(void) {
                         lp = 0;
                     }
                     reg_set(freq, vol, M_VOL_SET);
-                    __delay_ms(100);
                     blk_led1();
                 }
-            }
-            __delay_ms(100);
+                __delay_ms(200);
+             }
+            __delay_ms(200);
             continue;
         }
 
@@ -726,10 +734,10 @@ void main(void) {
         if (disp_c > 120) {
             disp_c = 6;
         } else if (disp_c > 7) {
-            __delay_ms(200);
+            __delay_ms(100);
             continue;
         } else if (disp_c < 3) {
-            __delay_ms(200);
+            __delay_ms(100);
             continue;
         }
         //counter 3,4,5,6,7
