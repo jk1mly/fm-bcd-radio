@@ -1,6 +1,6 @@
 /* 
  * FM tuner for PIC16F1503
- *    Freq display like CW
+ *    indicates a frequency by BCD(Binary-coded decimal)
  *
  *      JA1YTS:Toshiba Amature Radio Station
  *      JK1MLY:Hidekazu Inaba
@@ -18,11 +18,9 @@
  * data sheet
  *  https://datasheet.lcsc.com/szlcsc/RDA5807M_C82537.pdf
  *
- *
  */
 
 #include <stdio.h>
-//#include <c90/stdlib.h>
 #include <stdint.h>
 #include <xc.h>
 #include <pic.h>
@@ -69,8 +67,6 @@
 #define	SW_FN       	RC3
 #define	PUSH_ON         0
 
-#define	FLG_ON          1
-#define	FLG_OFF         0
 #define	M_FRQ_SET       1      
 #define	M_SEQ_DN        2
 #define	M_SEQ_UP        3
@@ -86,7 +82,6 @@
 // I2C mode CHAN[9:0] BAND=2 CHAN = (Freq - 76.0M) / Ch_s
 // TFM Freq=80.0 BAND=2 Ch_s=100k CHAN=40 0x28 00 0010 1000
 #define	TUN_ADR         0x20
-#define	TUN_I2C         0x22
 #define	REG02_H         0xC0
 #define	MON02_H         0xE0
 #define	FUP02_H         0xC3
@@ -104,16 +99,12 @@
 #define	TUN05_H         0x8C
 #define	REG05_L         0x86
 
-#define false           0
-#define true            1
-
 #define BRIT1           15
 #define BRIT0           45
 #define DARK1           1
 #define DARK0           59
 
 void port_init(void) {
-    /* CONFIGURE GPIO */
     OSCCON = 0b01101000; //4MHz
     TRISA = 0b00101000; //Input(1)
     TRISC = 0b00111000; //Input(1)
@@ -124,9 +115,6 @@ void port_init(void) {
     LATC = 0b00000000;
     ANSELA = 0b00000000;
     ANSELC = 0b00000000;
-    ADCON0 = 0b00001001; //CHS00010 AN2
-    ADCON1 = 0b10010000; //ADFM ADCS001 2us
-    ADCON2 = 0b00000000;
 }
 
 void blk_led1(void) {
@@ -188,7 +176,7 @@ void led_chk(void) {
     __delay_ms(200);
 
     blk_led5();
-    __delay_ms(100);
+    __delay_ms(200);
 }
 
 void i2c_st(void) {
@@ -258,7 +246,7 @@ void i2c_snd(uint8_t data) {
         } else {
             I2C_SDA_HIGH;
         }
-        data = (uint8_t) (data << 1);
+        data = (data << 1) & 0xff;
         __delay_us(2);
         i2c_sck();
     }
@@ -269,7 +257,7 @@ uint8_t i2c_rcv_cnt() {
     uint8_t data = 0;
     I2C_SDA_READ;
     for (uint8_t lp = 0; lp < 8; lp++) {
-        data = (uint8_t) (data << 1);
+        data = (data << 1) & 0xff;
         __delay_us(2);
         if (I2C_SDA_DATA == 1) {
             data = data | 0x01;
@@ -285,7 +273,7 @@ uint8_t i2c_rcv_end() {
     uint8_t data = 0;
     I2C_SDA_READ;
     for (uint8_t lp = 0; lp < 8; lp++) {
-        data = (uint8_t) (data << 1);
+        data = (data << 1) & 0xff;
         __delay_us(2);
         if (I2C_SDA_DATA == 1) {
             data = data | 0x01;
@@ -305,7 +293,7 @@ uint8_t tun_rcv(void) {
 
     i2c_st();
     // read
-    data = (uint8_t) ((TUN_ADR & 0xFE) | 0x01);
+    data = (TUN_ADR & 0xFE) | 0x01;
     i2c_snd(data);
 
     // reg0A
@@ -330,72 +318,72 @@ void reg_set(uint8_t freq, uint8_t vol, uint8_t mode) {
     uint8_t frq_h;
     uint8_t frq_l;
     uint8_t frq_r;
-    frq_r = (uint8_t) (freq - 60);
-    frq_h = (uint8_t) (frq_r >> 2);
-    frq_l = (uint8_t) ((frq_r & 0x03) << 6);
-
     uint8_t data;
+
+    frq_r = (freq - 60);
+    frq_h = (frq_r >> 2);
+    frq_l = ((frq_r & 0x03) << 6) & 0xff;
 
     i2c_st();
     // write
-    data = (uint8_t) (TUN_ADR & 0xFE);
+    data = (TUN_ADR & 0xFE);
     i2c_snd(data);
 
     // reg02
     if (mode == M_SEQ_UP) {
-        data = (uint8_t) (FUP02_H & 0xFF);
+        data = FUP02_H;
     } else if (mode == M_SEQ_DN) {
-        data = (uint8_t) (FDN02_H & 0xFF);
+        data = FDN02_H;
     } else {
-        data = (uint8_t) (REG02_H & 0xFF);
+        data = REG02_H;
     }
     i2c_snd(data);
     // 	
-    data = (uint8_t) (REG02_L & 0xFF);
+    data = REG02_L;
     i2c_snd(data);
 
     // reg03
     if (mode == M_TUN_CHK) {
-        data = (uint8_t) (TFM03_H & 0xFF);
+        data = TFM03_H;
     } else {
-        data = (uint8_t) (frq_h & 0xFF);
+        data = frq_h;
     }
     i2c_snd(data);
     // 	
     if (mode == M_TUN_CHK) {
-        data = (uint8_t) (TFM03_L & 0xFF);
+        data = TFM03_L;
     } else if (mode == M_VOL_SET) {
-        data = (uint8_t) ((frq_l & 0xC0) | (REG03_L & 0x3F));
+        data = (frq_l & 0xC0) | (REG03_L & 0x3F);
     } else if (mode == M_SEQ_UP) {
-        data = (uint8_t) ((frq_l & 0xC0) | (REG03_L & 0x3F));
+        data = (frq_l & 0xC0) | (REG03_L & 0x3F);
     } else if (mode == M_SEQ_DN) {
-        data = (uint8_t) ((frq_l & 0xC0) | (REG03_L & 0x3F));
+        data = (frq_l & 0xC0) | (REG03_L & 0x3F);
     } else {
-        data = (uint8_t) ((frq_l & 0xC0) | (TUN03_L & 0x3F));
+        data = (frq_l & 0xC0) | (TUN03_L & 0x3F);
     }
     i2c_snd(data);
 
     // reg04
-    data = (uint8_t) (REG04_H & 0xFF);
+    data = REG04_H;
     i2c_snd(data);
     // 	
-    data = (uint8_t) (REG04_L & 0xFF);
+    data = REG04_L;
     i2c_snd(data);
 
     // reg05
     if (mode == M_SEQ_UP) {
-        data = (uint8_t) (TUN05_H & 0xFF);
+        data = TUN05_H;
     } else if (mode == M_SEQ_DN) {
-        data = (uint8_t) (TUN05_H & 0xFF);
+        data = TUN05_H;
     } else {
-        data = (uint8_t) (REG05_H & 0xFF);
+        data = REG05_H;
     }
     i2c_snd(data);
     // 	
     if (mode == M_TUN_CHK) {
-        data = (uint8_t) (REG05_L & 0xFF);
+        data = REG05_L;
     } else {
-        data = (uint8_t) ((REG05_L & 0xF0) | (vol & 0x0F));
+        data = (REG05_L & 0xF0) | (vol & 0x0F);
     }
     i2c_snd(data);
 
@@ -474,15 +462,6 @@ void bcd_num(uint8_t num) {
         for (uint8_t us = 0; us < tim0[3]; us++) {
             LED_WAIT;
         }
-
-        if (SW_UP == PUSH_ON) {
-            return;
-        }
-        if (SW_DN == PUSH_ON) {
-            return;
-        }
-
-        __delay_ms(1);
     }
 }
 
@@ -516,50 +495,39 @@ void frq_bcd_disp(uint8_t freq) {
     bcd_num(frq3);
     //Wait        
     for (uint8_t lp = 0; lp < 4; lp++) {
-        if (SW_UP == PUSH_ON) {
+        if ((SW_UP == PUSH_ON) || (SW_DN == PUSH_ON) || (SW_FN == PUSH_ON)) {
             return;
+        } else {
+            __delay_ms(50);
         }
-        if (SW_DN == PUSH_ON) {
-            return;
-        }
-        if (SW_FN == PUSH_ON) {
-            return;
-        }
-        __delay_ms(50);
     }
 
     bcd_num(frq2);
     //Wait        
     for (uint8_t lp = 0; lp < 4; lp++) {
-        if (SW_UP == PUSH_ON) {
+        if ((SW_UP == PUSH_ON) || (SW_DN == PUSH_ON) || (SW_FN == PUSH_ON)) {
             return;
+        } else {
+            __delay_ms(50);
         }
-        if (SW_DN == PUSH_ON) {
-            return;
-        }
-        if (SW_FN == PUSH_ON) {
-            return;
-        }
-        __delay_ms(50);
     }
 
     bcd_num(frq1);
     //Wait        
     for (uint8_t lp = 0; lp < 6; lp++) {
-        if (SW_UP == PUSH_ON) {
+        if ((SW_UP == PUSH_ON) || (SW_DN == PUSH_ON) || (SW_FN == PUSH_ON)) {
             return;
+        } else {
+            __delay_ms(50);
         }
-        if (SW_DN == PUSH_ON) {
-            return;
-        }
-        if (SW_FN == PUSH_ON) {
-            return;
-        }
-        __delay_ms(50);
     }
 }
 
 void main(void) {
+    uint8_t freq = SET_TFM;
+    uint8_t frq_seq = 0;
+    uint8_t vol = 5;
+    uint8_t disp_c = 3;
 
     //Initialize
     port_init();
@@ -576,34 +544,28 @@ void main(void) {
             blk_led5();
             __delay_ms(100);
         }
-        __delay_ms(300);
+        __delay_ms(250);
+        freq = SET_NHK;
         for (uint8_t lp = 0; lp < 16; lp++) {
             bcd_num(lp);
-            __delay_ms(300);
+            __delay_ms(250);
         }
         while (SW_DN == PUSH_ON) {
+            freq = SET_NAK;
             blk_led2();
         }
         while (SW_UP == PUSH_ON) {
+            freq = SET_JWV;
             blk_led4();
         }
     }
 
     //Start
-    __delay_ms(10);
-    uint8_t freq = SET_TFM;
-    uint8_t frq_seq = 0;
-    uint8_t vol = 6;
-    uint8_t disp_c = 3;
-
-    if(SW_DN == PUSH_ON){
-        freq = SET_NAK;
-    } else if(SW_UP == PUSH_ON){
-        freq = SET_JWV;
-    }
-
+    __delay_ms(50);
+    blk_led3();
     reg_set(freq, vol, M_FRQ_SET);
-    __delay_ms(500);
+    __delay_ms(250);
+    __delay_ms(250);
 
     //Loop    
     while (1) {
@@ -620,25 +582,27 @@ void main(void) {
                     if (vol < VOL_LMT_H) {
                         vol++;
                         lp = 0;
+                        blk_led5();
                     }
                     reg_set(freq, vol, M_VOL_SET);
-                    blk_led5();
                 }
                 if (SW_DN == PUSH_ON) {
                     blk_led2();
                     if (vol > VOL_LMT_L) {
                         vol--;
                         lp = 0;
+                        blk_led1();
                     }
                     reg_set(freq, vol, M_VOL_SET);
-                    blk_led1();
                 }
                 __delay_ms(200);
             }
-            __delay_ms(200);
+            // exit vol set func 
+            __delay_ms(250);
+            __delay_ms(250);
             continue;
         }
-
+        //Tuning
         if ((frq_seq == 0) && (disp_c < 8) && (disp_c > 1)) {
             //Frequency Up
             if (SW_UP == PUSH_ON) {
@@ -653,13 +617,14 @@ void main(void) {
                     __delay_ms(200);
                     blk_led4();
                 }
-
+                //Step
                 if (SW_UP != PUSH_ON) {
                     reg_set(freq, vol, M_FRQ_SET);
                     for (uint8_t lp = 0; lp < 2; lp++) {
                         __delay_ms(200);
                         blk_led4();
                     }
+                    //Seek
                 } else {
                     reg_set(freq, vol, M_SEQ_UP);
                     frq_seq = 1;
@@ -684,7 +649,7 @@ void main(void) {
                     __delay_ms(200);
                     blk_led2();
                 }
-
+                //Step
                 blk_led2();
                 if (SW_DN != PUSH_ON) {
                     reg_set(freq, vol, M_FRQ_SET);
@@ -692,6 +657,7 @@ void main(void) {
                         __delay_ms(200);
                         blk_led2();
                     }
+                    //Seek
                 } else {
                     reg_set(freq, vol, M_SEQ_DN);
                     frq_seq = 1;
@@ -707,23 +673,7 @@ void main(void) {
         //Wait        
         for (uint8_t lp = 0; lp < 10; lp++) {
             __delay_ms(50);
-            if (SW_UP == PUSH_ON) {
-                if (disp_c > 7) {
-                    blk_led1();
-                    blk_led5();
-                    disp_c = 0;
-                }
-                break;
-            }
-            if (SW_DN == PUSH_ON) {
-                if (disp_c > 7) {
-                    blk_led1();
-                    blk_led5();
-                    disp_c = 0;
-                }
-                break;
-            }
-            if (SW_FN == PUSH_ON) {
+            if ((SW_UP == PUSH_ON) || (SW_DN == PUSH_ON) || (SW_FN == PUSH_ON)) {
                 if (disp_c > 7) {
                     blk_led1();
                     blk_led5();
@@ -745,31 +695,26 @@ void main(void) {
             __delay_ms(100);
             continue;
         }
-        //counter 3,4,5,6,7
+        //active counter 3,4,5,6,7
         frq_rd = tun_rcv();
         if (frq_rd > 190) {
-            blk_led3();
+            blk_led2();
+            blk_led4();
             freq = 40;
         } else {
             freq = (frq_rd + 60);
         }
+        //sleep break
         frq_bcd_disp(freq);
-        if (SW_UP == PUSH_ON) {
+        if ((SW_UP == PUSH_ON) || (SW_DN == PUSH_ON)) {
             if (disp_c > 7) {
                 blk_led1();
                 blk_led5();
                 disp_c = 0;
             }
             continue;
+        } else {
+            __delay_ms(100);
         }
-        if (SW_DN == PUSH_ON) {
-            if (disp_c > 7) {
-                blk_led1();
-                blk_led5();
-                disp_c = 0;
-            }
-            continue;
-        }
-        __delay_ms(100);
     }
 }
