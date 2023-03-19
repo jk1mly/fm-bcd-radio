@@ -47,8 +47,8 @@
 #define I2C_SDA_HIGH	LATA5 = 1;TRISA5 = 1    // Z(1)
 #define	I2C_SDA_READ    LATA5 = 0;TRISA5 = 1    // Input
 #define	I2C_SDA_DATA    RA5
-#define	I2C_SCK_LOW     LATA4 = 0
-#define	I2C_SCK_HIGH	LATA4 = 1
+#define	I2C_SCK_LOW     LATC4 = 0
+#define	I2C_SCK_HIGH	LATC4 = 1
 #define	LED_WAIT        asm ("NOP");asm ("NOP");asm ("NOP")
 
 #define	LED1_ON      	LATA0 = 1; LATA1 = 0
@@ -63,7 +63,7 @@
 #define	LED5_OFF     	LATC1 = 0; LATC2 = 0
 
 #define	SW_UP       	RC5
-#define	SW_DN       	RC4
+#define	SW_DN       	RA4
 #define	SW_FN       	RC3
 #define	PUSH_ON         0
 
@@ -106,13 +106,13 @@
 
 void port_init(void) {
     OSCCON = 0b01101000; //4MHz
-    TRISA = 0b00101000; //Input(1)
-    TRISC = 0b00111000; //Input(1)
+    TRISA = 0b00111000; //Input(1)
+    TRISC = 0b00101000; //Input(1)
     OPTION_REG = 0b00000000; //MSB WPUENn
-    WPUA = 0b00101000; //PupOn(1)
+    WPUA  = 0b00111000; //PupOn(1)
     INTCON = 0b00000000;
-    LATA = 0b00010000;
-    LATC = 0b00000000;
+    LATA  = 0b00000000;
+    LATC  = 0b00010000;
     ANSELA = 0b00000000;
     ANSELC = 0b00000000;
 }
